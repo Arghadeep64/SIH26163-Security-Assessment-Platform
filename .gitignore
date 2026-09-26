@@ -29,8 +29,6 @@ yarn-error.log*
 
 # Generated Reports & Artifacts
 reports/generated/
-*.pdf
-*.html
 
 # IDE & Editor files
 .vscode/*
