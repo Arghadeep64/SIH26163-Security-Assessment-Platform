@@ -16,13 +16,15 @@ import {
 } from '../types/api';
 
 const API_BASE_URL =
-  (import.meta as any).env?.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
+  (import.meta as any).env?.VITE_API_BASE_URL !== undefined
+    ? (import.meta as any).env.VITE_API_BASE_URL
+    : '';
 
 class ApiService {
   private baseUrl: string;
 
   constructor(baseUrl: string = API_BASE_URL) {
-    this.baseUrl = baseUrl.replace(/\/+$/, '');
+    this.baseUrl = baseUrl ? baseUrl.replace(/\/+$/, '') : '';
   }
 
   public getBaseUrl(): string {
@@ -30,11 +32,12 @@ class ApiService {
   }
 
   public setBaseUrl(url: string): void {
-    this.baseUrl = url.replace(/\/+$/, '');
+    this.baseUrl = url ? url.replace(/\/+$/, '') : '';
   }
 
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-    const url = `${this.baseUrl}${endpoint.startsWith('/') ? endpoint : '/' + endpoint}`;
+    const cleanEndpoint = endpoint.startsWith('/') ? endpoint : '/' + endpoint;
+    const url = this.baseUrl ? `${this.baseUrl}${cleanEndpoint}` : cleanEndpoint;
     const defaultHeaders = {
       'Content-Type': 'application/json',
       Accept: 'application/json',
@@ -65,8 +68,9 @@ class ApiService {
       return (await response.json()) as T;
     } catch (err: any) {
       if (err.name === 'TypeError' && err.message.includes('fetch')) {
+        const target = this.baseUrl || 'same-origin server';
         throw new Error(
-          `Unable to connect to the assessment backend at ${this.baseUrl}. Please verify the backend is running.`
+          `Unable to connect to the assessment backend at ${target}. Please verify the backend is running.`
         );
       }
       throw err;
@@ -153,11 +157,13 @@ class ApiService {
   }
 
   public getReportDownloadUrl(reportId: number): string {
-    return `${this.baseUrl}/api/reports/download/${reportId}`;
+    const base = this.baseUrl ? this.baseUrl : '';
+    return `${base}/api/reports/download/${reportId}`;
   }
 
   public getReportViewUrl(reportId: number): string {
-    return `${this.baseUrl}/api/reports/view/${reportId}`;
+    const base = this.baseUrl ? this.baseUrl : '';
+    return `${base}/api/reports/view/${reportId}`;
   }
 
   // ==========================================
