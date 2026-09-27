@@ -45,8 +45,27 @@ reports/generated/
 Thumbs.db
 desktop.ini
 
-# Local research clone
-research/worldmonitor/
+# Local research clone - ignore all by default except audited security check targets
+research/worldmonitor/*
+!research/worldmonitor/package.json
+!research/worldmonitor/package-lock.json
+!research/worldmonitor/vercel.json
+!research/worldmonitor/api/
+research/worldmonitor/api/*
+!research/worldmonitor/api/_rss-allowed-domains.js
+!research/worldmonitor/api/mcp-proxy.ts
+!research/worldmonitor/api/rss-proxy.js
+!research/worldmonitor/src-tauri/
+research/worldmonitor/src-tauri/*
+!research/worldmonitor/src-tauri/Cargo.lock
+!research/worldmonitor/src-tauri/Cargo.toml
+!research/worldmonitor/src-tauri/tauri.conf.json
+!research/worldmonitor/src-tauri/sidecar/
+research/worldmonitor/src-tauri/sidecar/*
+!research/worldmonitor/src-tauri/sidecar/local-api-server.mjs
+!research/worldmonitor/src-tauri/src/
+research/worldmonitor/src-tauri/src/*
+!research/worldmonitor/src-tauri/src/main.rs
 
 # TypeScript build cache
 *.tsbuildinfo

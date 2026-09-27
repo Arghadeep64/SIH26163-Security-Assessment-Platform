@@ -50,8 +50,8 @@ if not exist "%INDEX_HTML%" (
 )
 
 :: 4. Check for Port 8000 Conflict
-netstat -ano | findstr /R ":8000 .*LISTENING" >nul 2>&1
-if %errorlevel% equ 0 (
+netstat -ano -p tcp | findstr /R /C:":8000 .*LISTENING" >nul 2>&1
+if not errorlevel 1 (
     echo.
     echo [WARNING] Port 8000 is already in use by an active listener.
     echo Opening browser to http://127.0.0.1:8000...
