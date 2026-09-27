@@ -210,8 +210,8 @@ def generate_pdf_report(
         [
             Paragraph("<b>Assessment Date:</b>", body_style),
             Paragraph(
-                assessment.created_at.strftime("%Y-%m-%d %H:%M:%S UTC")
-                if assessment.created_at
+                (assessment.started_at or assessment.created_at).strftime("%Y-%m-%d %H:%M:%S UTC")
+                if (assessment.started_at or assessment.created_at)
                 else "N/A",
                 body_style,
             ),
@@ -425,117 +425,131 @@ def generate_pdf_report(
     story.append(Spacer(1, 15))
 
     # ==========================================
-    # 5. DETAILED FINDINGS
+    # 5. DETAILED FINDINGS & OBSERVATIONS
     # ==========================================
     story.append(PageBreak())
-    story.append(Paragraph("04. Vulnerability Findings & Technical Evidence", section_heading))
+    story.append(Paragraph("04. Security Findings & Technical Observations", section_heading))
 
-    if not findings:
-        story.append(
-            Paragraph("<i>No vulnerability findings were identified during this assessment session.</i>", body_style)
+    confirmed_findings = [
+        f for f in findings
+        if (f.status in ("CONFIRMED", "OPEN") or is_demo)
+        and f.status not in ("ENVIRONMENT_OBSERVATION", "SOURCE_REVIEW", "INFORMATIONAL")
+    ]
+    observations = [
+        f for f in findings
+        if f.status in ("ENVIRONMENT_OBSERVATION", "SOURCE_REVIEW", "INFORMATIONAL")
+        or f not in confirmed_findings
+    ]
+    observations = [f for f in observations if f not in confirmed_findings]
+
+    # Build evidence lookup
+    evidence_by_finding: dict[int, list[Evidence]] = {}
+    evidence_by_check: dict[int, list[Evidence]] = {}
+    for ev in evidence_items:
+        if ev.finding_id:
+            evidence_by_finding.setdefault(ev.finding_id, []).append(ev)
+        if ev.check_id:
+            evidence_by_check.setdefault(ev.check_id, []).append(ev)
+
+    def render_finding_item(f, is_observation=False):
+        finding_elements = []
+        is_demo_finding = is_demo or "CONTROLLED DEMO" in f.title
+
+        f_header_text = f"<b>{f.finding_code} — {f.title}</b>"
+        finding_elements.append(
+            Paragraph(
+                f_header_text,
+                ParagraphStyle(
+                    "FHead",
+                    parent=body_style,
+                    fontName="Helvetica-Bold",
+                    fontSize=11,
+                    textColor=colors.HexColor("#0f172a"),
+                ),
+            )
         )
-    else:
-        # Build evidence lookup
-        evidence_by_finding: dict[int, list[Evidence]] = {}
-        evidence_by_check: dict[int, list[Evidence]] = {}
-        for ev in evidence_items:
-            if ev.finding_id:
-                evidence_by_finding.setdefault(ev.finding_id, []).append(ev)
-            if ev.check_id:
-                evidence_by_check.setdefault(ev.check_id, []).append(ev)
 
-        for f in findings:
-            finding_elements = []
-
-            # Finding Header Block
-            is_demo_finding = is_demo or "CONTROLLED DEMO" in f.title
-
-            f_header_text = f"<b>{f.finding_code} — {f.title}</b>"
+        if is_demo_finding:
             finding_elements.append(
                 Paragraph(
-                    f_header_text,
-                    ParagraphStyle(
-                        "FHead",
-                        parent=body_style,
-                        fontName="Helvetica-Bold",
-                        fontSize=11,
-                        textColor=colors.HexColor("#0f172a"),
-                    ),
+                    "<font color='#b45309'><b>• CONTROLLED DEMONSTRATION FINDING • NOT A WORLDMONITOR FINDING</b></font>",
+                    body_style,
+                )
+            )
+        elif f.status == "ENVIRONMENT_OBSERVATION":
+            finding_elements.append(
+                Paragraph(
+                    "<font color='#166534'><b>• DEVELOPMENT ENVIRONMENT OBSERVATION • NOT A CONFIRMED APPLICATION VULNERABILITY</b></font>",
+                    body_style,
+                )
+            )
+        elif f.status == "SOURCE_REVIEW":
+            finding_elements.append(
+                Paragraph(
+                    "<font color='#0369a1'><b>• SOURCE CODE REVIEW OBSERVATION • DOCUMENTED MITIGATIONS ACTIVE</b></font>",
+                    body_style,
                 )
             )
 
-            if is_demo_finding:
-                finding_elements.append(
-                    Paragraph(
-                        "<font color='#b45309'><b>• CONTROLLED DEMONSTRATION FINDING • NOT A WORLDMONITOR FINDING</b></font>",
-                        body_style,
-                    )
-                )
-            elif f.status == "ENVIRONMENT_OBSERVATION":
-                finding_elements.append(
-                    Paragraph(
-                        "<font color='#166534'><b>• DEVELOPMENT ENVIRONMENT OBSERVATION • NOT A CONFIRMED APPLICATION VULNERABILITY</b></font>",
-                        body_style,
-                    )
-                )
-            elif f.status == "SOURCE_REVIEW":
-                finding_elements.append(
-                    Paragraph(
-                        "<font color='#0369a1'><b>• SOURCE CODE REVIEW OBSERVATION • DOCUMENTED MITIGATIONS ACTIVE</b></font>",
-                        body_style,
-                    )
-                )
-
-            # Metadata Table
-            cvss_text = f"{f.cvss_score}" if f.cvss_score is not None else "CVSS score not assigned."
-            f_meta = [
-                [
-                    Paragraph(f"<b>Severity:</b> {f.severity}", body_style),
-                    Paragraph(f"<b>Status:</b> {f.status}", body_style),
-                    Paragraph(f"<b>Category:</b> {f.category}", body_style),
-                    Paragraph(f"<b>CVSS:</b> {cvss_text}", body_style),
-                ]
+        # Metadata Table
+        cvss_text = f"{f.cvss_score}" if f.cvss_score is not None else ("N/A (Observation)" if is_observation else "CVSS score not assigned.")
+        f_meta = [
+            [
+                Paragraph(f"<b>Severity:</b> {f.severity}", body_style),
+                Paragraph(f"<b>Status:</b> {f.status}", body_style),
+                Paragraph(f"<b>Category:</b> {f.category}", body_style),
+                Paragraph(f"<b>CVSS:</b> {cvss_text}", body_style),
             ]
-            f_meta_table = Table(f_meta, colWidths=[1.75 * inch] * 4)
-            f_meta_table.setStyle(
-                TableStyle(
-                    [
-                        ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#f8fafc")),
-                        ("BOX", (0, 0), (-1, -1), 0.5, colors.HexColor("#cbd5e1")),
-                        ("TOPPADDING", (0, 0), (-1, -1), 3),
-                        ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
-                    ]
+        ]
+        f_meta_table = Table(f_meta, colWidths=[1.75 * inch] * 4)
+        f_meta_table.setStyle(
+            TableStyle(
+                [
+                    ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#f8fafc")),
+                    ("BOX", (0, 0), (-1, -1), 0.5, colors.HexColor("#cbd5e1")),
+                    ("TOPPADDING", (0, 0), (-1, -1), 3),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+                ]
+            )
+        )
+        finding_elements.append(f_meta_table)
+        finding_elements.append(Spacer(1, 4))
+
+        # Description
+        desc_label = "<b>Observation Details:</b>" if is_observation else "<b>Description:</b>"
+        finding_elements.append(Paragraph(desc_label, body_style))
+        finding_elements.append(Paragraph(f.description or "No description recorded.", body_style))
+
+        # Impact
+        if f.impact:
+            impact_label = "<b>Technical Context & Scope:</b>" if is_observation else "<b>Security & Technical Impact:</b>"
+            finding_elements.append(Paragraph(impact_label, body_style))
+            finding_elements.append(Paragraph(f.impact, body_style))
+
+        # Evidence
+        f_ev_list = evidence_by_finding.get(f.id, [])
+        if not f_ev_list and f.check_id:
+            f_ev_list = evidence_by_check.get(f.check_id, [])
+        if f_ev_list:
+            finding_elements.append(Paragraph("<b>Technical Evidence (Sanitized):</b>", body_style))
+            for ev in f_ev_list:
+                ev_text = ev.response_data or ev.request_data or "Evidence logged."
+                finding_elements.append(Paragraph(ev_text.replace("\n", "<br/>"), code_style))
+
+        # Reproduction / Guidance
+        if is_observation:
+            finding_elements.append(Paragraph("<b>Verification & Governance Guidance:</b>", body_style))
+            finding_elements.append(
+                Paragraph(
+                    f"<font color='#0369a1'>{f.remediation or 'Maintain documented architectural controls and CI verification.'}</font>",
+                    body_style,
                 )
             )
-            finding_elements.append(f_meta_table)
-            finding_elements.append(Spacer(1, 4))
-
-            # Description
-            finding_elements.append(Paragraph("<b>Description:</b>", body_style))
-            finding_elements.append(Paragraph(f.description or "No description recorded.", body_style))
-
-            # Impact
-            if f.impact:
-                finding_elements.append(Paragraph("<b>Security & Technical Impact:</b>", body_style))
-                finding_elements.append(Paragraph(f.impact, body_style))
-
-            # Evidence
-            f_ev_list = evidence_by_finding.get(f.id, [])
-            if not f_ev_list and f.check_id:
-                f_ev_list = evidence_by_check.get(f.check_id, [])
-            if f_ev_list:
-                finding_elements.append(Paragraph("<b>Technical Evidence (Sanitized):</b>", body_style))
-                for ev in f_ev_list:
-                    ev_text = ev.response_data or ev.request_data or "Evidence logged."
-                    # Wrap long lines in evidence
-                    finding_elements.append(Paragraph(ev_text.replace("\n", "<br/>"), code_style))
-
-            # Reproduction Steps
+        else:
             finding_elements.append(Paragraph("<b>Reproduction Steps:</b>", body_style))
             repro = f.reproduction_steps or "Controlled reproduction steps were not recorded."
             finding_elements.append(Paragraph(repro.replace("\n", "<br/>"), code_style))
 
-            # Remediation
             finding_elements.append(Paragraph("<b>Defensive Remediation:</b>", body_style))
             finding_elements.append(
                 Paragraph(
@@ -543,9 +557,45 @@ def generate_pdf_report(
                     body_style,
                 )
             )
-            finding_elements.append(HRFlowable(width="100%", thickness=1, color=colors.HexColor("#e2e8f0"), spaceAfter=10))
 
-            story.append(KeepTogether(finding_elements))
+        finding_elements.append(HRFlowable(width="100%", thickness=1, color=colors.HexColor("#e2e8f0"), spaceAfter=10))
+        return KeepTogether(finding_elements)
+
+    # 4.1 Confirmed Vulnerabilities
+    sub_heading = ParagraphStyle(
+        "SubSectionHeading",
+        parent=body_style,
+        fontName="Helvetica-Bold",
+        fontSize=12,
+        textColor=colors.HexColor("#0f172a"),
+        spaceBefore=8,
+        spaceAfter=6,
+    )
+    story.append(Paragraph(f"<b>04.1 Confirmed Vulnerabilities ({len(confirmed_findings)})</b>", sub_heading))
+
+    if not confirmed_findings:
+        story.append(
+            Paragraph(
+                "<font color='#166534'><b>Confirmed World Monitor Vulnerabilities: 0</b><br/>"
+                "No confirmed World Monitor vulnerability was established within the assessed scope and methodology.</font>",
+                body_style,
+            )
+        )
+        story.append(Spacer(1, 10))
+    else:
+        for f in confirmed_findings:
+            story.append(render_finding_item(f, is_observation=False))
+
+    # 4.2 Security Observations
+    story.append(Spacer(1, 10))
+    story.append(Paragraph(f"<b>04.2 Security Observations & Environment Notes ({len(observations)})</b>", sub_heading))
+
+    if not observations:
+        story.append(Paragraph("<i>No security observations recorded for this session.</i>", body_style))
+        story.append(Spacer(1, 10))
+    else:
+        for f in observations:
+            story.append(render_finding_item(f, is_observation=True))
 
     # ==========================================
     # 6. MANUAL VERIFICATION, LIMITATIONS, CONCLUSION

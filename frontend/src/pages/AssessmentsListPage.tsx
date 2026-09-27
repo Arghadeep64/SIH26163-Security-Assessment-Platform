@@ -172,7 +172,7 @@ export const AssessmentsListPage: React.FC<AssessmentsListPageProps> = ({
                     <td>
                       <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
                         {a.duration_seconds !== null && a.duration_seconds !== undefined
-                          ? `${a.duration_seconds.toFixed(2)}s`
+                          ? `${Number(a.duration_seconds).toFixed(2)}s`
                           : '—'}
                       </span>
                     </td>

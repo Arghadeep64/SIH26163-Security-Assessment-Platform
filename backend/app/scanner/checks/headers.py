@@ -113,7 +113,7 @@ async def check_security_headers(context: ScanContext) -> CheckResult:
                     f"An application vulnerability is not established from this local runtime observation; "
                     f"manual verification of the production-equivalent edge deployment is required."
                 )
-                finding_impact = "Local development serving layers typically omit production edge headers. In production, reverse proxy injection is required."
+                finding_impact = "Production-equivalent deployment should be verified to ensure the security headers declared in vercel.json are actually delivered at the deployed edge."
                 result.status = CheckStatus.MANUAL.value
 
             result.findings.append(

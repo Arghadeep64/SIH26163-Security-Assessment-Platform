@@ -153,3 +153,56 @@ export interface ReportGenerateRequest {
   report_type: ReportFormat;
 }
 
+export interface WorldMonitorOverview {
+  project: string;
+  primary_target: {
+    name: string;
+    production_url: string;
+    repository_url: string;
+    cloned_source_path: string;
+    commit: string;
+    source_present_locally: boolean;
+    assessment_mode: string;
+  };
+  assessment_verdict: {
+    statement: string;
+    status: string;
+    production_findings_count: number;
+    controlled_demo_findings_count: number;
+    environment_observations_count: number;
+  };
+  latest_assessment?: {
+    id: number;
+    target_url: string;
+    target_type: TargetType;
+    status: AssessmentStatus;
+    total_checks: number;
+    passed_checks: number;
+    failed_checks: number;
+    manual_checks: number;
+    error_checks: number;
+    duration_seconds?: number | null;
+    created_at?: string | null;
+  } | null;
+  security_domains_assessed: Array<{
+    domain: string;
+    status: string;
+    provider?: string;
+    controls?: string;
+  }>;
+}
+
+export interface WorldMonitorSourceAuditCategory {
+  category: string;
+  component: string;
+  source_files: string[];
+  verified_controls: string[];
+  assessment_verdict: string;
+}
+
+export interface WorldMonitorSourceAudit {
+  repository: string;
+  commit: string;
+  audit_categories: WorldMonitorSourceAuditCategory[];
+}
+

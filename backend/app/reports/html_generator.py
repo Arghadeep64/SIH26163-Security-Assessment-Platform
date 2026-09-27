@@ -72,10 +72,25 @@ def generate_html_report(
         or "demo-target" in str(assessment.target_url)
     )
 
+    confirmed_findings = [
+        f for f in findings
+        if (f.status in ("CONFIRMED", "OPEN") or is_demo)
+        and f.status not in ("ENVIRONMENT_OBSERVATION", "SOURCE_REVIEW", "INFORMATIONAL")
+    ]
+    observations = [
+        f for f in findings
+        if f.status in ("ENVIRONMENT_OBSERVATION", "SOURCE_REVIEW", "INFORMATIONAL")
+        or f not in confirmed_findings
+    ]
+    # Deduplicate while preserving order
+    observations = [f for f in observations if f not in confirmed_findings]
+
     rendered_html = template.render(
         assessment=assessment,
         checks=checks,
         findings=findings,
+        confirmed_findings=confirmed_findings,
+        observations=observations,
         is_demo=is_demo,
         generated_at=datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC"),
     )

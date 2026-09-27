@@ -4,6 +4,7 @@ import { Topbar } from './components/common/Topbar';
 import { SecurityNotice } from './components/common/SecurityNotice';
 
 import { DashboardPage } from './pages/DashboardPage';
+import { WorldMonitorPage } from './pages/WorldMonitorPage';
 import { NewAssessmentPage } from './pages/NewAssessmentPage';
 import { AssessmentsListPage } from './pages/AssessmentsListPage';
 import { AssessmentDetailPage } from './pages/AssessmentDetailPage';
@@ -12,6 +13,7 @@ import { SecurityChecksPage } from './pages/SecurityChecksPage';
 import { ReportsPage } from './pages/ReportsPage';
 import { MethodologyPage } from './pages/MethodologyPage';
 import { SettingsPage } from './pages/SettingsPage';
+
 
 import api from './services/api';
 import './App.css';
@@ -56,6 +58,7 @@ export const App: React.FC = () => {
 
   const getPageTitle = (): string => {
     if (currentTab === 'dashboard') return 'Security Operations Center Dashboard';
+    if (currentTab === 'world-monitor') return 'World Monitor Security Assessment';
     if (currentTab === 'new-assessment') return 'Initiate New Security Assessment';
     if (currentTab === 'assessments') {
       return selectedAssessmentId
@@ -76,10 +79,22 @@ export const App: React.FC = () => {
         return (
           <DashboardPage
             key={refreshKey}
+            onNavigateWorldMonitor={() => setCurrentTab('world-monitor')}
             onNavigateNewAssessment={() => setCurrentTab('new-assessment')}
             onNavigateAssessmentDetail={(id) => handleSelectAssessment(id)}
             onNavigateAssessmentsList={() => setCurrentTab('assessments')}
             onNavigateFindings={() => setCurrentTab('findings')}
+            onNavigateChecks={() => setCurrentTab('checks')}
+            onNavigateReports={() => setCurrentTab('reports')}
+          />
+        );
+      case 'world-monitor':
+        return (
+          <WorldMonitorPage
+            key={refreshKey}
+            onNavigateNewAssessment={() => setCurrentTab('new-assessment')}
+            onNavigateAssessmentDetail={(id) => handleSelectAssessment(id)}
+            onNavigateReports={() => setCurrentTab('reports')}
           />
         );
       case 'new-assessment':
@@ -89,6 +104,7 @@ export const App: React.FC = () => {
             onCancel={() => setCurrentTab('dashboard')}
           />
         );
+
       case 'assessments':
         if (selectedAssessmentId) {
           return (
@@ -119,10 +135,13 @@ export const App: React.FC = () => {
       default:
         return (
           <DashboardPage
+            onNavigateWorldMonitor={() => setCurrentTab('world-monitor')}
             onNavigateNewAssessment={() => setCurrentTab('new-assessment')}
             onNavigateAssessmentDetail={(id) => handleSelectAssessment(id)}
             onNavigateAssessmentsList={() => setCurrentTab('assessments')}
             onNavigateFindings={() => setCurrentTab('findings')}
+            onNavigateChecks={() => setCurrentTab('checks')}
+            onNavigateReports={() => setCurrentTab('reports')}
           />
         );
     }

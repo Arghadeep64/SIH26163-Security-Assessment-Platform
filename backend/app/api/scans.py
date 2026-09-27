@@ -1,6 +1,7 @@
 """API endpoints for managing and retrieving security assessments."""
 
 from typing import Optional
+from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, status
 from sqlalchemy.orm import Session
 
@@ -47,6 +48,7 @@ async def create_scan(
         target_url=payload.target_url,
         target_type=payload.target_type,
         status="QUEUED",
+        created_at=datetime.now(timezone.utc),
     )
     db.add(assessment)
     db.commit()

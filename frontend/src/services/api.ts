@@ -167,6 +167,18 @@ class ApiService {
   }
 
   // ==========================================
+  // World Monitor Dedicated APIs
+  // ==========================================
+
+  public async getWorldMonitorOverview(): Promise<import('../types/api').WorldMonitorOverview> {
+    return this.request<import('../types/api').WorldMonitorOverview>('/api/worldmonitor/overview');
+  }
+
+  public async getWorldMonitorSourceAudit(): Promise<import('../types/api').WorldMonitorSourceAudit> {
+    return this.request<import('../types/api').WorldMonitorSourceAudit>('/api/worldmonitor/source-audit');
+  }
+
+  // ==========================================
   // System Health APIs
   // ==========================================
 
@@ -193,4 +205,5 @@ class ApiService {
 
 export const api = new ApiService();
 export default api;
+
 

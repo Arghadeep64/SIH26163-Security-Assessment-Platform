@@ -442,7 +442,7 @@
             </div>
             <div>
               <div class="meta-item-label">Assessment Date</div>
-              <div class="meta-item-value">{{ assessment.created_at.strftime('%Y-%m-%d %H:%M:%S UTC') if assessment.created_at else 'N/A' }}</div>
+              <div class="meta-item-value">{{ (assessment.started_at or assessment.created_at).strftime('%Y-%m-%d %H:%M:%S UTC') if (assessment.started_at or assessment.created_at) else 'N/A' }}</div>
             </div>
             <div>
               <div class="meta-item-label">Report Generated</div>
@@ -516,6 +516,20 @@
           <div style="font-size: 0.72rem; font-weight: 700; text-transform: uppercase;">Info</div>
           <div style="font-size: 1.4rem; font-weight: 800; font-family: var(--font-mono);">{{ assessment.info_findings }}</div>
         </div>
+      </div>
+      <div style="background: var(--bg-alt); border: 1px solid var(--border); border-radius: 8px; padding: 1rem 1.25rem; margin-top: 1rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
+        <div>
+          <span style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700;">Assessment Finding Classification</span>
+          <div style="font-size: 0.95rem; font-weight: 700; color: var(--primary); margin-top: 0.15rem;">
+            Confirmed Vulnerabilities: <span style="color: {% if confirmed_findings|length > 0 %}var(--sev-high){% else %}var(--status-pass){% endif %}; font-family: var(--font-mono);">{{ confirmed_findings|length }}</span>
+            &bull; Security Observations: <span style="color: var(--accent); font-family: var(--font-mono);">{{ observations|length }}</span>
+          </div>
+        </div>
+        {% if not is_demo and confirmed_findings|length == 0 %}
+        <div style="font-size: 0.82rem; color: #166534; font-weight: 600; background: #f0fdf4; border: 1px solid #86efac; padding: 0.35rem 0.75rem; border-radius: 4px;">
+          No confirmed World Monitor vulnerability was established within the assessed scope and methodology.
+        </div>
+        {% endif %}
       </div>
     </div>
 
@@ -621,98 +635,188 @@
       </table>
     </div>
 
-    <!-- 5. DETAILED FINDINGS -->
+    <!-- 5. DETAILED FINDINGS & OBSERVATIONS -->
     <div class="report-section">
       <h2 class="section-title">
-        <span><span class="section-num">05</span> Vulnerability Findings &amp; Technical Evidence</span>
+        <span><span class="section-num">05</span> Vulnerability Findings &amp; Security Observations</span>
       </h2>
 
-      {% if findings|length == 0 %}
-        <p style="padding: 1.5rem; background: var(--bg-alt); border-radius: 6px; text-align: center; color: var(--text-muted);">
-          No vulnerability findings were identified during this assessment session.
-        </p>
-      {% else %}
-        {% for finding in findings %}
-        <div class="finding-block">
-          <div class="finding-header">
-            <div>
-              <span class="badge badge-{{ finding.severity|lower }}">{{ finding.severity }}</span>
-              <span style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted); margin-left: 0.5rem;">
-                {{ finding.finding_code }}
-              </span>
+      <!-- 5.1 Confirmed Vulnerabilities -->
+      <div style="margin-bottom: 2rem;">
+        <h3 style="font-size: 1.1rem; font-weight: 700; color: var(--primary); margin-bottom: 0.75rem; border-bottom: 2px solid var(--border); padding-bottom: 0.35rem;">
+          5.1 Confirmed Vulnerabilities ({{ confirmed_findings|length }})
+        </h3>
+
+        {% if confirmed_findings|length == 0 %}
+          <div style="padding: 1.25rem 1.5rem; background: #f0fdf4; border: 1px solid #86efac; border-radius: 6px; margin-bottom: 1.5rem;">
+            <div style="font-weight: 700; color: #166534; margin-bottom: 0.25rem;">
+              Confirmed World Monitor Vulnerabilities: 0
             </div>
-            <div style="font-size: 0.75rem; color: var(--text-muted);">
-              Confidence: <strong>{{ "%.0f"|format(finding.confidence) if finding.confidence else 'N/A' }}%</strong> &bull;
-              Status: <strong>{{ finding.status }}</strong>
+            <div style="font-size: 0.85rem; color: #15803d;">
+              No vulnerability findings were identified during this assessment session. No confirmed World Monitor vulnerability was established within the assessed scope and methodology.
             </div>
           </div>
-
-          <div class="finding-body">
-            {% if is_demo or 'CONTROLLED DEMO' in finding.title %}
-            <div class="demo-finding-tag">
-              &bull; CONTROLLED DEMONSTRATION FINDING &bull; NOT A WORLDMONITOR FINDING
-            </div>
-            {% elif finding.status == 'ENVIRONMENT_OBSERVATION' %}
-            <div style="background: #f0fdf4; border: 1px solid #86efac; color: #166534; padding: 0.4rem 0.75rem; border-radius: 4px; font-size: 0.75rem; font-weight: 700; margin-bottom: 0.75rem; text-transform: uppercase; letter-spacing: 0.03em;">
-              &bull; DEVELOPMENT ENVIRONMENT OBSERVATION &bull; NOT A CONFIRMED APPLICATION VULNERABILITY
-            </div>
-            {% elif finding.status == 'SOURCE_REVIEW' %}
-            <div style="background: #f0f9ff; border: 1px solid #7dd3fc; color: #0369a1; padding: 0.4rem 0.75rem; border-radius: 4px; font-size: 0.75rem; font-weight: 700; margin-bottom: 0.75rem; text-transform: uppercase; letter-spacing: 0.03em;">
-              &bull; SOURCE CODE REVIEW OBSERVATION &bull; DOCUMENTED MITIGATIONS ACTIVE
-            </div>
-            {% endif %}
-
-            <h3 class="finding-title-text">{{ finding.title }}</h3>
-
-            <div class="finding-meta-row">
+        {% else %}
+          {% for finding in confirmed_findings %}
+          <div class="finding-block">
+            <div class="finding-header">
               <div>
-                <span style="color: var(--text-muted);">Category:</span> <strong>{{ finding.category }}</strong>
+                <span class="badge badge-{{ finding.severity|lower }}">{{ finding.severity }}</span>
+                <span style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted); margin-left: 0.5rem;">
+                  {{ finding.finding_code }}
+                </span>
               </div>
-              <div>
-                <span style="color: var(--text-muted);">Affected Component:</span> <strong>{{ finding.affected_component or 'General' }}</strong>
-              </div>
-              <div>
-                <span style="color: var(--text-muted);">CVSS v3.1:</span> <strong>{{ finding.cvss_score if finding.cvss_score is not none else 'CVSS score not assigned.' }}</strong>
-              </div>
-            </div>
-
-            <div class="field-label">Vulnerability Description</div>
-            <p style="font-size: 0.85rem; color: var(--text); line-height: 1.6;">
-              {{ finding.description or 'No description provided.' }}
-            </p>
-
-            {% if finding.impact %}
-            <div class="field-label">Security &amp; Technical Impact</div>
-            <p style="font-size: 0.85rem; color: var(--text); line-height: 1.6;">
-              {{ finding.impact }}
-            </p>
-            {% endif %}
-
-            {% if finding.evidence_items %}
-            <div class="field-label">Observed Technical Evidence</div>
-            {% for ev in finding.evidence_items %}
-            <div style="margin-top: 0.5rem;">
               <div style="font-size: 0.75rem; color: var(--text-muted);">
-                Type: <strong>{{ ev.evidence_type }}</strong> {% if ev.redacted %}&bull; <span style="color: #d97706; font-weight: 600;">[Secrets Redacted]</span>{% endif %}
+                Confidence: <strong>{{ "%.0f"|format(finding.confidence) if finding.confidence else 'N/A' }}%</strong> &bull;
+                Status: <strong>{{ finding.status }}</strong>
               </div>
-              {% if ev.response_data %}
-              <div class="evidence-code-box">{{ ev.response_data }}</div>
-              {% endif %}
             </div>
-            {% endfor %}
-            {% endif %}
 
-            <div class="field-label">Reproduction Steps</div>
-            <div class="evidence-code-box" style="background: #f8fafc; color: #334155; border: 1px solid var(--border);">{{ finding.reproduction_steps or 'Controlled reproduction steps were not recorded.' }}</div>
+            <div class="finding-body">
+              {% if is_demo or 'CONTROLLED DEMO' in finding.title %}
+              <div class="demo-finding-tag">
+                &bull; CONTROLLED DEMONSTRATION FINDING &bull; NOT A WORLDMONITOR FINDING
+              </div>
+              {% endif %}
 
-            <div class="field-label">Defensive Remediation</div>
-            <div class="remediation-box">
-              {{ finding.remediation or 'Apply standard defensive hardening.' }}
+              <h3 class="finding-title-text">{{ finding.title }}</h3>
+
+              <div class="finding-meta-row">
+                <div>
+                  <span style="color: var(--text-muted);">Category:</span> <strong>{{ finding.category }}</strong>
+                </div>
+                <div>
+                  <span style="color: var(--text-muted);">Affected Component:</span> <strong>{{ finding.affected_component or 'General' }}</strong>
+                </div>
+                <div>
+                  <span style="color: var(--text-muted);">CVSS v3.1:</span> <strong>{{ finding.cvss_score if finding.cvss_score is not none else 'CVSS score not assigned.' }}</strong>
+                </div>
+              </div>
+
+              <div class="field-label">Vulnerability Description</div>
+              <p style="font-size: 0.85rem; color: var(--text); line-height: 1.6;">
+                {{ finding.description or 'No description provided.' }}
+              </p>
+
+              {% if finding.impact %}
+              <div class="field-label">Security &amp; Technical Impact</div>
+              <p style="font-size: 0.85rem; color: var(--text); line-height: 1.6;">
+                {{ finding.impact }}
+              </p>
+              {% endif %}
+
+              {% if finding.evidence_items %}
+              <div class="field-label">Observed Technical Evidence</div>
+              {% for ev in finding.evidence_items %}
+              <div style="margin-top: 0.5rem;">
+                <div style="font-size: 0.75rem; color: var(--text-muted);">
+                  Type: <strong>{{ ev.evidence_type }}</strong> {% if ev.redacted %}&bull; <span style="color: #d97706; font-weight: 600;">[Secrets Redacted]</span>{% endif %}
+                </div>
+                {% if ev.response_data %}
+                <div class="evidence-code-box">{{ ev.response_data }}</div>
+                {% endif %}
+              </div>
+              {% endfor %}
+              {% endif %}
+
+              <div class="field-label">Reproduction Steps</div>
+              <div class="evidence-code-box" style="background: #f8fafc; color: #334155; border: 1px solid var(--border);">{{ finding.reproduction_steps or 'Controlled reproduction steps were not recorded.' }}</div>
+
+              <div class="field-label">Defensive Remediation</div>
+              <div class="remediation-box">
+                {{ finding.remediation or 'Apply standard defensive hardening.' }}
+              </div>
             </div>
           </div>
-        </div>
-        {% endfor %}
-      {% endif %}
+          {% endfor %}
+        {% endif %}
+      </div>
+
+      <!-- 5.2 Security Observations -->
+      <div>
+        <h3 style="font-size: 1.1rem; font-weight: 700; color: var(--primary); margin-bottom: 0.75rem; border-bottom: 2px solid var(--border); padding-bottom: 0.35rem;">
+          5.2 Security Observations &amp; Environment Notes ({{ observations|length }})
+        </h3>
+
+        {% if observations|length == 0 %}
+          <p style="padding: 1rem; background: var(--bg-alt); border-radius: 6px; color: var(--text-muted); margin-bottom: 1.5rem;">
+            No security observations recorded for this session.
+          </p>
+        {% else %}
+          {% for finding in observations %}
+          <div class="finding-block" style="border-left: 4px solid var(--accent);">
+            <div class="finding-header">
+              <div>
+                <span class="badge badge-info">{{ finding.status }}</span>
+                <span style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted); margin-left: 0.5rem;">
+                  {{ finding.finding_code }}
+                </span>
+              </div>
+              <div style="font-size: 0.75rem; color: var(--text-muted);">
+                Observation Classification &bull; <strong>NOT A CONFIRMED VULNERABILITY</strong>
+              </div>
+            </div>
+
+            <div class="finding-body">
+              {% if finding.status == 'ENVIRONMENT_OBSERVATION' %}
+              <div style="background: #f0fdf4; border: 1px solid #86efac; color: #166534; padding: 0.4rem 0.75rem; border-radius: 4px; font-size: 0.75rem; font-weight: 700; margin-bottom: 0.75rem; text-transform: uppercase; letter-spacing: 0.03em;">
+                &bull; DEVELOPMENT ENVIRONMENT OBSERVATION &bull; NOT A CONFIRMED APPLICATION VULNERABILITY
+              </div>
+              {% elif finding.status == 'SOURCE_REVIEW' %}
+              <div style="background: #f0f9ff; border: 1px solid #7dd3fc; color: #0369a1; padding: 0.4rem 0.75rem; border-radius: 4px; font-size: 0.75rem; font-weight: 700; margin-bottom: 0.75rem; text-transform: uppercase; letter-spacing: 0.03em;">
+                &bull; SOURCE CODE REVIEW OBSERVATION &bull; DOCUMENTED MITIGATIONS ACTIVE
+              </div>
+              {% endif %}
+
+              <h3 class="finding-title-text">{{ finding.title }}</h3>
+
+              <div class="finding-meta-row">
+                <div>
+                  <span style="color: var(--text-muted);">Category:</span> <strong>{{ finding.category }}</strong>
+                </div>
+                <div>
+                  <span style="color: var(--text-muted);">Affected Component:</span> <strong>{{ finding.affected_component or 'General' }}</strong>
+                </div>
+                <div>
+                  <span style="color: var(--text-muted);">Status:</span> <strong>{{ finding.status }}</strong>
+                </div>
+              </div>
+
+              <div class="field-label">Observation Details</div>
+              <p style="font-size: 0.85rem; color: var(--text); line-height: 1.6;">
+                {{ finding.description or 'No description provided.' }}
+              </p>
+
+              {% if finding.impact %}
+              <div class="field-label">Technical Context &amp; Scope</div>
+              <p style="font-size: 0.85rem; color: var(--text); line-height: 1.6;">
+                {{ finding.impact }}
+              </p>
+              {% endif %}
+
+              {% if finding.evidence_items %}
+              <div class="field-label">Observed Evidence</div>
+              {% for ev in finding.evidence_items %}
+              <div style="margin-top: 0.5rem;">
+                <div style="font-size: 0.75rem; color: var(--text-muted);">
+                  Type: <strong>{{ ev.evidence_type }}</strong> {% if ev.redacted %}&bull; <span style="color: #d97706; font-weight: 600;">[Secrets Redacted]</span>{% endif %}
+                </div>
+                {% if ev.response_data %}
+                <div class="evidence-code-box">{{ ev.response_data }}</div>
+                {% endif %}
+              </div>
+              {% endfor %}
+              {% endif %}
+
+              <div class="field-label">Verification &amp; Governance Guidance</div>
+              <div class="remediation-box" style="background: #f0f9ff; border-left-color: var(--accent); color: #0369a1;">
+                {{ finding.remediation or 'Maintain documented architectural controls and CI verification.' }}
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        {% endif %}
+      </div>
     </div>
 
     <!-- 6. MANUAL VERIFICATION REQUIRED -->

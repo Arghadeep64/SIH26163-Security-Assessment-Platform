@@ -13,6 +13,7 @@ import {
 
 export type NavTab =
   | 'dashboard'
+  | 'world-monitor'
   | 'new-assessment'
   | 'assessments'
   | 'findings'
@@ -29,6 +30,7 @@ interface SidebarProps {
 export const Sidebar: React.FC<SidebarProps> = ({ currentTab, onSelectTab }) => {
   const navItems: { id: NavTab; label: string; icon: React.ReactNode }[] = [
     { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard size={18} /> },
+    { id: 'world-monitor', label: 'World Monitor', icon: <Shield size={18} color="var(--accent-cyan)" /> },
     { id: 'new-assessment', label: 'New Assessment', icon: <ShieldPlus size={18} /> },
     { id: 'assessments', label: 'Assessments', icon: <History size={18} /> },
     { id: 'findings', label: 'Findings', icon: <AlertTriangle size={18} /> },
@@ -37,6 +39,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, onSelectTab }) => 
     { id: 'methodology', label: 'Methodology', icon: <BookOpen size={18} /> },
     { id: 'settings', label: 'Settings', icon: <Settings size={18} /> },
   ];
+
 
   return (
     <aside className="sidebar">

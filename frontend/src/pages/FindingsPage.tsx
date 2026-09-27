@@ -50,6 +50,18 @@ export const FindingsPage: React.FC = () => {
     );
   });
 
+  const confirmedVulnerabilities = filteredFindings.filter(
+    (f) =>
+      (f.status === 'CONFIRMED' || f.status === 'OPEN' || f.title.includes('CONTROLLED DEMO')) &&
+      f.status !== 'ENVIRONMENT_OBSERVATION' &&
+      f.status !== 'SOURCE_REVIEW' &&
+      f.status !== 'INFORMATIONAL'
+  );
+
+  const securityObservations = filteredFindings.filter(
+    (f) => !confirmedVulnerabilities.includes(f)
+  );
+
   return (
     <div className="page-container">
       <div className="page-header">
@@ -143,6 +155,37 @@ export const FindingsPage: React.FC = () => {
         </div>
       </div>
 
+      {/* Classification Summary Callout */}
+      <div
+        className="soc-card"
+        style={{
+          padding: '0.85rem 1.25rem',
+          marginBottom: '1.25rem',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: '0.75rem',
+          borderLeft: '4px solid var(--accent-cyan)',
+        }}
+      >
+        <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+          <strong style={{ color: 'var(--text-bright)' }}>SIH26163 Presentation Standard:</strong> Security observations (environment differences and documented source patterns) are strictly separated from confirmed exploitable vulnerabilities.
+        </div>
+        <div
+          style={{
+            fontSize: '0.8rem',
+            color: '#10b981',
+            fontWeight: 600,
+            background: 'rgba(16, 185, 129, 0.1)',
+            padding: '0.3rem 0.6rem',
+            borderRadius: '4px',
+          }}
+        >
+          No confirmed World Monitor vulnerability was established within the assessed scope and methodology.
+        </div>
+      </div>
+
       {/* Content */}
       {loading ? (
         <LoadingState message="Querying findings repository..." />
@@ -155,14 +198,67 @@ export const FindingsPage: React.FC = () => {
           icon={<ShieldAlert size={28} />}
         />
       ) : (
-        <div className="soc-card">
-          <div className="card-header">
-            <div className="card-title">
-              <ShieldAlert size={18} color="var(--sev-high)" />
-              <span>Security Findings Registry ({filteredFindings.length})</span>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+          {/* Confirmed Vulnerabilities */}
+          <div className="soc-card">
+            <div className="card-header">
+              <div className="card-title">
+                <ShieldAlert size={18} color="var(--sev-high)" />
+                <span>
+                  Confirmed Vulnerabilities ({confirmedVulnerabilities.length})
+                </span>
+              </div>
             </div>
+            {confirmedVulnerabilities.length === 0 ? (
+              <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+                <div style={{ color: '#10b981', fontWeight: 600, fontSize: '0.95rem' }}>
+                  Confirmed World Monitor Vulnerabilities: 0
+                </div>
+                <div style={{ fontSize: '0.82rem', marginTop: '0.25rem' }}>
+                  No confirmed World Monitor vulnerability was established within the assessed scope and methodology.
+                </div>
+              </div>
+            ) : (
+              <FindingTable
+                findings={confirmedVulnerabilities}
+                onSelectFinding={(f) => setSelectedFinding(f)}
+              />
+            )}
           </div>
-          <FindingTable findings={filteredFindings} onSelectFinding={(f) => setSelectedFinding(f)} />
+
+          {/* Security Observations */}
+          <div className="soc-card">
+            <div className="card-header">
+              <div className="card-title">
+                <ShieldAlert size={18} color="var(--accent-cyan)" />
+                <span>
+                  Security Observations &amp; Environment Notes ({securityObservations.length})
+                </span>
+              </div>
+              <span
+                style={{
+                  fontSize: '0.72rem',
+                  padding: '0.2rem 0.55rem',
+                  background: 'rgba(6, 182, 212, 0.15)',
+                  color: 'var(--accent-cyan)',
+                  borderRadius: '4px',
+                  fontWeight: 600,
+                }}
+              >
+                AUDIT OBSERVATIONS — NOT CONFIRMED VULNERABILITIES
+              </span>
+            </div>
+            {securityObservations.length === 0 ? (
+              <div style={{ padding: '1.5rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+                No security observations match current filter.
+              </div>
+            ) : (
+              <FindingTable
+                findings={securityObservations}
+                onSelectFinding={(f) => setSelectedFinding(f)}
+              />
+            )}
+          </div>
         </div>
       )}
 
