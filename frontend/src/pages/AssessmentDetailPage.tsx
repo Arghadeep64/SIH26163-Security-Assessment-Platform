@@ -17,6 +17,7 @@ import {
   AlertCircle,
   ShieldAlert,
   Server,
+  Globe,
 } from 'lucide-react';
 import api from '../services/api';
 
@@ -210,6 +211,24 @@ export const AssessmentDetailPage: React.FC<AssessmentDetailPageProps> = ({
           <ShieldAlert size={20} color="#f59e0b" style={{ flexShrink: 0 }} />
           <div style={{ fontSize: '0.85rem', color: '#fef3c7' }}>
             <strong>CONTROLLED DEMONSTRATION TARGET:</strong> This assessment was performed against the local testbed on port 9000. All detected weaknesses are synthetic demo findings and are not findings against World Monitor.
+          </div>
+        </div>
+      ) : assessment.target_type === 'AUTHORIZED_REMOTE' ? (
+        <div
+          style={{
+            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+            border: '1px solid rgba(59, 130, 246, 0.35)',
+            borderRadius: '6px',
+            padding: '0.85rem 1.25rem',
+            marginBottom: '1.5rem',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.75rem',
+          }}
+        >
+          <Globe size={20} color="#60a5fa" style={{ flexShrink: 0 }} />
+          <div style={{ fontSize: '0.85rem', color: '#dbeafe' }}>
+            <strong>AUTHORIZED REMOTE TARGET:</strong> This assessment was performed against an authorized remote parity/demo target. Assessment operations evaluate public edge interfaces and remote security headers under authorized scope.
           </div>
         </div>
       ) : (

@@ -24,6 +24,23 @@ async def check_cors_policy(context: ScanContext) -> CheckResult:
         started_at=started_at,
     )
 
+    # Initial connectivity probe to verify target is reachable before extensive origin matrix evaluation
+    initial_resp = await client.request("GET", "/")
+    if initial_resp.error or initial_resp.status_code == 0:
+        result.status = CheckStatus.MANUAL.value
+        result.severity = SeverityLevel.INFO.value
+        result.description = f"Target was unreachable for CORS policy evaluation: {initial_resp.error}"
+        result.evidence.append(
+            create_evidence(
+                evidence_type=EvidenceType.HTTP_HEADER,
+                title="CORS Evaluation Skipped (Target Unreachable)",
+                description=initial_resp.error or "No HTTP response established",
+                response_data=f"Target URL: {context.target_url}\nError: {initial_resp.error}",
+            )
+        )
+        result.completed_at = datetime.now(timezone.utc)
+        return result
+
     test_origins = [
         ("https://unauthorized-third-party.example.com", "Arbitrary Third-Party Origin"),
         ("tauri://localhost", "Tauri Desktop Loopback Origin"),
