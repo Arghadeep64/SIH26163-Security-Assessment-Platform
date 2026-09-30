@@ -44,6 +44,26 @@ async def check_tls_configuration(context: ScanContext) -> CheckResult:
     resp = await client.request("GET", "/")
 
     if resp.error:
+        is_timeout_or_unreachable = any(
+            t in (resp.error or "").lower()
+            for t in ["timeout", "connecterror", "connection refused", "unreachable"]
+        ) and "certificate_verify_failed" not in (resp.error or "").lower()
+
+        if is_timeout_or_unreachable:
+            result.status = CheckStatus.MANUAL.value
+            result.severity = SeverityLevel.INFO.value
+            result.description = f"Target was unreachable for TLS handshake evaluation from assessment environment: {resp.error}"
+            result.evidence.append(
+                create_evidence(
+                    evidence_type=EvidenceType.HTTP_RESPONSE,
+                    title="TLS Evaluation Skipped (Target Unreachable)",
+                    description=resp.error,
+                    response_data=f"Target URL: {context.target_url}\nError: {resp.error}",
+                )
+            )
+            result.completed_at = datetime.now(timezone.utc)
+            return result
+
         result.status = CheckStatus.ERROR.value
         result.description = f"TLS handshake or connection failed: {resp.error}"
         result.evidence.append(

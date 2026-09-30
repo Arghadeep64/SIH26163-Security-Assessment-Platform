@@ -26,8 +26,17 @@ async def check_security_headers(context: ScanContext) -> CheckResult:
     )
 
     if resp.error or resp.status_code == 0:
-        result.status = CheckStatus.ERROR.value
-        result.description = f"Unable to reach target for security headers check: {resp.error}"
+        result.status = CheckStatus.MANUAL.value
+        result.severity = SeverityLevel.INFO.value
+        result.description = f"Target was unreachable for security headers evaluation from assessment environment: {resp.error or 'No response received'}"
+        result.evidence.append(
+            create_evidence(
+                evidence_type=EvidenceType.HTTP_HEADER,
+                title="Security Headers Evaluation Skipped (Target Unreachable)",
+                description=resp.error or "No connection established to target endpoint",
+                response_data=f"Target URL: {context.target_url}\nError: {resp.error}",
+            )
+        )
         result.completed_at = datetime.now(timezone.utc)
         return result
 

@@ -165,11 +165,90 @@ async def test_check_cookie_security(local_context):
 
 
 @pytest.mark.anyio
+async def test_check_security_headers_unreachable_timeout(local_context):
+    """Verify unreachable target on WEB-001 is classified as MANUAL with liveness evidence."""
+    mock_resp = SafeHttpResponse(
+        status_code=0,
+        headers={},
+        body="",
+        duration_ms=5000.0,
+        url="https://remote.example.com/",
+        method="GET",
+        is_success=False,
+        is_redirect=False,
+        error="Network connection failed: ConnectTimeout ()",
+    )
+    with patch("app.scanner.http_client.SafeHttpClient.request", new_callable=AsyncMock) as mock_req:
+        mock_req.return_value = mock_resp
+        result = await check_security_headers(local_context)
+        assert result.check_id == "WEB-001"
+        assert result.status == CheckStatus.MANUAL.value
+        assert "Target was unreachable" in result.description
+        assert len(result.evidence) > 0
+
+
+@pytest.mark.anyio
 async def test_check_tls_configuration_localhost(local_context):
     """Verify check_tls_configuration handles localhost HTTP cleanly."""
     result = await check_tls_configuration(local_context)
     assert result.check_id == "WEB-004"
     assert result.status == CheckStatus.PASS.value
+
+
+@pytest.mark.anyio
+async def test_check_tls_configuration_unreachable_timeout():
+    """Verify network connection timeout on HTTPS target is classified as MANUAL."""
+    remote_ctx = ScanContext(
+        assessment_id=3,
+        target_url="https://remote.example.com",
+        target_type="AUTHORIZED_REMOTE",
+        authorized=True,
+    )
+    mock_resp = SafeHttpResponse(
+        status_code=0,
+        headers={},
+        body="",
+        duration_ms=5000.0,
+        url="https://remote.example.com/",
+        method="GET",
+        is_success=False,
+        is_redirect=False,
+        error="Network connection failed: ConnectTimeout ()",
+    )
+    with patch("app.scanner.http_client.SafeHttpClient.request", new_callable=AsyncMock) as mock_req:
+        mock_req.return_value = mock_resp
+        result = await check_tls_configuration(remote_ctx)
+        assert result.check_id == "WEB-004"
+        assert result.status == CheckStatus.MANUAL.value
+        assert "Target was unreachable for TLS handshake" in result.description
+
+
+@pytest.mark.anyio
+async def test_check_tls_configuration_certificate_error():
+    """Verify genuine SSL/TLS certificate verification failure is classified as ERROR."""
+    remote_ctx = ScanContext(
+        assessment_id=4,
+        target_url="https://invalid-cert.example.com",
+        target_type="AUTHORIZED_REMOTE",
+        authorized=True,
+    )
+    mock_resp = SafeHttpResponse(
+        status_code=0,
+        headers={},
+        body="",
+        duration_ms=500.0,
+        url="https://invalid-cert.example.com/",
+        method="GET",
+        is_success=False,
+        is_redirect=False,
+        error="Network connection failed: ConnectError ([SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed)",
+    )
+    with patch("app.scanner.http_client.SafeHttpClient.request", new_callable=AsyncMock) as mock_req:
+        mock_req.return_value = mock_resp
+        result = await check_tls_configuration(remote_ctx)
+        assert result.check_id == "WEB-004"
+        assert result.status == CheckStatus.ERROR.value
+        assert "TLS handshake or connection failed" in result.description
 
 
 @pytest.mark.anyio
