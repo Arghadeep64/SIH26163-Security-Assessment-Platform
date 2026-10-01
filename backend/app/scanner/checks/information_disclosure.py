@@ -36,8 +36,10 @@ async def check_information_disclosure(context: ScanContext) -> CheckResult:
     disclosures = []
 
     for path in endpoints_to_test:
-        resp = await client.request("GET", path)
+        resp = await client.request("GET", path, timeout=3.0)
         if resp.error or resp.status_code == 0:
+            if resp.error and ("ConnectTimeout" in resp.error or "ConnectError" in resp.error):
+                break
             continue
 
         # Check for verbose Server and X-Powered-By headers

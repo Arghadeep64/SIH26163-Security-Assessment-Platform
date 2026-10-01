@@ -63,16 +63,25 @@ class SafeHttpClient:
         full_url = f"{base_url}{normalized_path}"
 
         req_headers = {
-            "User-Agent": self.context.user_agent,
+            "User-Agent": self.context.user_agent or "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36 (Security Assessment Platform)",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+            "Accept-Language": "en-US,en;q=0.9",
             **(dict(headers) if headers else {}),
         }
 
         req_timeout = timeout if timeout is not None else float(self.context.timeout)
+        connect_timeout = min(3.5, req_timeout)
         start_time = time.perf_counter()
 
         try:
             async with httpx.AsyncClient(
-                timeout=httpx.Timeout(req_timeout),
+                timeout=httpx.Timeout(
+                    timeout=req_timeout,
+                    connect=connect_timeout,
+                    read=req_timeout,
+                    write=req_timeout,
+                    pool=connect_timeout,
+                ),
                 follow_redirects=True,
                 max_redirects=self.context.max_redirects,
                 verify=True,

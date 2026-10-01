@@ -34,9 +34,11 @@ async def check_api_discovery(context: ScanContext) -> CheckResult:
     discovery_log = []
 
     for path, label in public_probes:
-        resp = await client.request("GET", path)
+        resp = await client.request("GET", path, timeout=3.0)
         if resp.error or resp.status_code == 0:
             discovery_log.append(f"{path} ({label}): Unreachable ({resp.error or 'No connection'})")
+            if resp.error and ("ConnectTimeout" in resp.error or "ConnectError" in resp.error):
+                break
             continue
 
         responding_endpoints.append(path)

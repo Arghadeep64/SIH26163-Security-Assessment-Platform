@@ -16,7 +16,7 @@ class ScanContext:
     source_path: str = "research/worldmonitor"
     max_redirects: int = 3
     max_response_bytes: int = 1024 * 1024  # 1 MB maximum response payload
-    user_agent: str = "SIH26163-Security-Assessment-Bot/1.0"
+    user_agent: str = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36 (Security Assessment Platform)"
     client_cert: Optional[str] = None
 
     def __post_init__(self) -> None:

@@ -26,8 +26,18 @@ async def check_security_headers(context: ScanContext) -> CheckResult:
     )
 
     if resp.error or resp.status_code == 0:
-        result.status = CheckStatus.ERROR.value
-        result.description = f"Unable to reach target for security headers check: {resp.error}"
+        result.status = CheckStatus.MANUAL.value
+        result.severity = SeverityLevel.INFO.value
+        result.description = f"Target host did not return an active HTTP response ({resp.error or 'Status 0'}). Edge response headers must be verified manually or through deployment configuration."
+        result.recommendation = "Verify that the target service is reachable and inspect edge headers (CSP, HSTS, X-Content-Type-Options) in deployment environment."
+        result.evidence.append(
+            create_evidence(
+                evidence_type=EvidenceType.HTTP_HEADER,
+                title="Target Header Probe Note",
+                description=f"Automated probe to {context.target_url} returned: {resp.error or 'No response'}",
+                response_data=f"Target: {context.target_url}\nError: {resp.error or 'No response'}",
+            )
+        )
         result.completed_at = datetime.now(timezone.utc)
         return result
 

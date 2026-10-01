@@ -47,8 +47,11 @@ async def check_cors_policy(context: ScanContext) -> CheckResult:
                     "Access-Control-Request-Method": "GET",
                     "Access-Control-Request-Headers": "Authorization, Content-Type",
                 },
+                timeout=3.0,
             )
             if not resp.error and resp.status_code not in (0, 404):
+                break
+            if resp.error and ("ConnectTimeout" in resp.error or "ConnectError" in resp.error):
                 break
 
             # Fallback to GET
@@ -56,8 +59,11 @@ async def check_cors_policy(context: ScanContext) -> CheckResult:
                 method="GET",
                 path=path,
                 headers={"Origin": test_origin},
+                timeout=3.0,
             )
             if not resp.error and resp.status_code not in (0, 404):
+                break
+            if resp.error and ("ConnectTimeout" in resp.error or "ConnectError" in resp.error):
                 break
 
         if not resp or resp.error:
